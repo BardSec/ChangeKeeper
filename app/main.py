@@ -5,7 +5,7 @@ from fastapi.templating import Jinja2Templates
 from starlette.middleware.sessions import SessionMiddleware
 from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
 from app.config import get_settings
-from app.auth import get_current_user_optional
+from app.auth import get_current_user_optional, microsoft_enabled, google_enabled
 from app.routers import auth, changes, reports
 from app.database import engine, Base
 
@@ -59,7 +59,9 @@ async def login_page(
         return RedirectResponse(url='/', status_code=302)
     
     return templates.TemplateResponse("login.html", {
-        "request": request
+        "request": request,
+        "microsoft_enabled": microsoft_enabled,
+        "google_enabled": google_enabled,
     })
 
 

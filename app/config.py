@@ -6,19 +6,23 @@ from pathlib import Path
 
 class Settings(BaseSettings):
     """Application settings from environment variables."""
-    
+
     # Database
     database_url: str
-    
+
     # Security
     secret_key: str
-    
-    # Microsoft Entra ID (Azure AD)
-    entra_client_id: str
-    entra_client_secret: str
-    entra_tenant_id: str
-    redirect_uri: str
-    
+
+    # Microsoft Entra ID (Azure AD) - optional if using Google
+    entra_client_id: str = ""
+    entra_client_secret: str = ""
+    entra_tenant_id: str = ""
+    redirect_uri: str = ""
+
+    # Google Workspace - optional if using Microsoft
+    google_client_id: str = ""
+    google_client_secret: str = ""
+
     # Email (optional)
     enable_email: bool = False
     smtp_host: str = ""
@@ -33,6 +37,7 @@ class Settings(BaseSettings):
     
     # Application
     app_name: str = "ChangeKeeper"
+    app_port: int = 8000
     
     class Config:
         env_file = ".env"
@@ -62,11 +67,11 @@ class RoleConfig:
     
     def get_user_role(self, group_ids: list[str]) -> str:
         """
-        Determine user role based on Entra ID group membership.
-        
+        Determine user role based on identity provider group membership.
+
         Args:
-            group_ids: List of Entra ID group Object IDs
-            
+            group_ids: List of group IDs (Entra ID Object IDs or Google Workspace group emails)
+
         Returns:
             Role name (admin, auditor, or user)
         """

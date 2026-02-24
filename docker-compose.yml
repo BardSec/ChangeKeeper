@@ -20,14 +20,17 @@ services:
   app:
     build: .
     ports:
-      - "8000:8000"
+      - "${APP_PORT:-8000}:${APP_PORT:-8000}"
     environment:
       - DATABASE_URL=postgresql://changekeeper_user:changekeeper_password@db:5432/changekeeper
       - SECRET_KEY=${SECRET_KEY}
-      - ENTRA_CLIENT_ID=${ENTRA_CLIENT_ID}
-      - ENTRA_CLIENT_SECRET=${ENTRA_CLIENT_SECRET}
-      - ENTRA_TENANT_ID=${ENTRA_TENANT_ID}
-      - REDIRECT_URI=${REDIRECT_URI:-http://localhost:8000/auth/callback}
+      - ENTRA_CLIENT_ID=${ENTRA_CLIENT_ID:-}
+      - ENTRA_CLIENT_SECRET=${ENTRA_CLIENT_SECRET:-}
+      - ENTRA_TENANT_ID=${ENTRA_TENANT_ID:-}
+      - REDIRECT_URI=${REDIRECT_URI:-http://localhost:${APP_PORT:-8000}/auth/callback}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID:-}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET:-}
+      - APP_PORT=${APP_PORT:-8000}
       - ENABLE_EMAIL=${ENABLE_EMAIL:-false}
       - SMTP_HOST=${SMTP_HOST:-}
       - SMTP_PORT=${SMTP_PORT:-587}
@@ -44,7 +47,7 @@ services:
     command: >
       sh -c "
         alembic upgrade head &&
-        uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+        uvicorn app.main:app --host 0.0.0.0 --port ${APP_PORT:-8000} --reload
       "
 
 volumes:

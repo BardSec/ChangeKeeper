@@ -185,6 +185,48 @@ body {
     font-size: 0.875rem;
 }
 
+.btn-microsoft {
+    background-color: #0078d4;
+    color: white;
+    display: block;
+}
+
+.btn-microsoft:hover {
+    background-color: #0056a3;
+}
+
+.btn-google {
+    background-color: #fff;
+    color: #3c4043;
+    border: 1px solid #dadce0;
+    display: block;
+}
+
+.btn-google:hover {
+    background-color: #f7f8f8;
+    border-color: #c6c6c6;
+}
+
+.login-divider {
+    display: flex;
+    align-items: center;
+    margin: 1.25rem 0;
+    color: var(--text-muted);
+    font-size: 0.875rem;
+}
+
+.login-divider::before,
+.login-divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background-color: var(--border-color);
+}
+
+.login-divider span {
+    padding: 0 0.75rem;
+}
+
 /* Dashboard */
 .page-header {
     display: flex;

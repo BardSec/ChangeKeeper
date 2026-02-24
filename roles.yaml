@@ -1,10 +1,14 @@
 # Role-based access control configuration
-# Maps Entra ID group Object IDs to application roles
-# 
-# To find group Object IDs:
-# 1. Go to Azure Portal > Azure Active Directory > Groups
-# 2. Select the group
-# 3. Copy the "Object ID" field
+# Maps identity provider group IDs to application roles
+#
+# For Microsoft Entra ID (Azure AD):
+#   1. Go to Azure Portal > Azure Active Directory > Groups
+#   2. Select the group
+#   3. Copy the "Object ID" field
+#
+# For Google Workspace:
+#   Use the group email address (e.g., "admins@yourdomain.com")
+#   Groups must be configured in Google Workspace Admin Console
 #
 # Roles:
 # - admin: Can export CSV, edit implementer field, view all changes
@@ -14,13 +18,15 @@
 roles:
   admin:
     groups:
-      # Example: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
-      - "your-admin-group-object-id-here"
-  
+      # Microsoft Entra ID example: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+      # Google Workspace example: "changekeeper-admins@yourdomain.com"
+      - "your-admin-group-id-here"
+
   auditor:
     groups:
-      # Example: "f9e8d7c6-b5a4-3210-9876-543210fedcba"
-      - "your-auditor-group-object-id-here"
+      # Microsoft Entra ID example: "f9e8d7c6-b5a4-3210-9876-543210fedcba"
+      # Google Workspace example: "changekeeper-auditors@yourdomain.com"
+      - "your-auditor-group-id-here"
 
 # Default role for users not in any configured group
 default_role: user
