@@ -32,6 +32,7 @@ services:
       - REDIRECT_URI=${REDIRECT_URI:-}
       - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID:-}
       - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET:-}
+      - APP_PORT=${APP_PORT:-8000}
       - ENABLE_EMAIL=${ENABLE_EMAIL:-false}
       - SMTP_HOST=${SMTP_HOST:-}
       - SMTP_PORT=${SMTP_PORT:-587}
@@ -47,12 +48,12 @@ services:
     command: >
       sh -c "
         alembic upgrade head &&
-        uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 4
+        uvicorn app.main:app --host 0.0.0.0 --port ${APP_PORT:-8000} --workers 4
       "
     networks:
       - changekeeper_network
     ports:
-      - "127.0.0.1:8000:8000"  # Only expose to localhost; use reverse proxy
+      - "127.0.0.1:${APP_PORT:-8000}:${APP_PORT:-8000}"  # Only expose to localhost; use reverse proxy
 
 volumes:
   postgres_data:

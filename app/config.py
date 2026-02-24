@@ -37,6 +37,7 @@ class Settings(BaseSettings):
     
     # Application
     app_name: str = "ChangeKeeper"
+    app_port: int = 8000
     
     class Config:
         env_file = ".env"
