@@ -3,7 +3,7 @@ import logging
 from fastapi import APIRouter, Request, HTTPException
 from fastapi.responses import RedirectResponse
 from app.auth import oauth, generate_nonce, generate_state, validate_token, extract_user_info, microsoft_enabled, google_enabled
-from app.config import get_role_config
+from app.config import get_settings, get_role_config
 from app.services import AuditService
 from app.database import get_db
 from authlib.integrations.base_client import OAuthError
@@ -112,7 +112,8 @@ async def login(request: Request):
     request.session['oauth_nonce'] = nonce
     request.session['oauth_state'] = state
 
-    redirect_uri = request.url_for('auth_callback')
+    settings = get_settings()
+    redirect_uri = settings.redirect_uri or str(request.url_for('auth_callback'))
     return await oauth.microsoft.authorize_redirect(
         request, redirect_uri, nonce=nonce, state=state
     )
@@ -138,7 +139,13 @@ async def google_login(request: Request):
     request.session['oauth_nonce'] = nonce
     request.session['oauth_state'] = state
 
-    redirect_uri = request.url_for('google_callback')
+    settings = get_settings()
+    if settings.redirect_uri:
+        # Derive Google callback from the configured base URL
+        base = settings.redirect_uri.rsplit('/auth/', 1)[0]
+        redirect_uri = f"{base}/auth/google/callback"
+    else:
+        redirect_uri = str(request.url_for('google_callback'))
     return await oauth.google.authorize_redirect(
         request, redirect_uri, nonce=nonce, state=state
     )
