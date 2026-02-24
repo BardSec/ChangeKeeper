@@ -1,79 +1,63 @@
 import smtplib
+import logging
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+from html import escape as html_escape
 from typing import Optional
 from app.config import get_settings
 import json
 
+logger = logging.getLogger(__name__)
 settings = get_settings()
 
 
 class EmailService:
     """Email service for sending change notifications (pluggable module)."""
-    
+
     @staticmethod
     def is_enabled() -> bool:
         """Check if email service is enabled."""
         return settings.enable_email and bool(settings.smtp_host)
-    
+
     @staticmethod
     def send_change_summary(
         recipient_email: str,
         change: dict,
         change_url: str
     ) -> bool:
-        """
-        Send change summary email.
-        
-        Args:
-            recipient_email: Recipient email address
-            change: Change record dictionary
-            change_url: URL to view the change
-            
-        Returns:
-            True if sent successfully, False otherwise
-        """
         if not EmailService.is_enabled():
             return False
-        
+
         try:
-            # Create message
             msg = MIMEMultipart('alternative')
-            msg['Subject'] = f"Change Record: {change['title']}"
+            msg['Subject'] = f"Change Record: {change['title'][:100]}"
             msg['From'] = settings.smtp_from
             msg['To'] = recipient_email
-            
-            # Create plain text version
+
             text_content = EmailService._create_text_summary(change, change_url)
-            
-            # Create HTML version
             html_content = EmailService._create_html_summary(change, change_url)
-            
-            # Attach both versions
+
             part1 = MIMEText(text_content, 'plain')
             part2 = MIMEText(html_content, 'html')
             msg.attach(part1)
             msg.attach(part2)
-            
-            # Send email
+
             with smtplib.SMTP(settings.smtp_host, settings.smtp_port) as server:
+                server.starttls()
                 if settings.smtp_user and settings.smtp_password:
-                    server.starttls()
                     server.login(settings.smtp_user, settings.smtp_password)
                 server.send_message(msg)
-            
+
             return True
-            
-        except Exception as e:
-            # Log error but don't fail the change creation
-            print(f"Email send failed: {e}")
+
+        except Exception:
+            logger.exception("Email send failed")
             return False
-    
+
     @staticmethod
     def _create_text_summary(change: dict, change_url: str) -> str:
-        """Create plain text email summary."""
         systems = ', '.join(json.loads(change['systems_affected']))
-        
+
         text = f"""
 IT Change Record Summary
 
@@ -93,12 +77,20 @@ This is an automated notification. Sensitive details are not included in this em
 Please use the link above to view the complete change record.
 """
         return text.strip()
-    
+
     @staticmethod
     def _create_html_summary(change: dict, change_url: str) -> str:
-        """Create HTML email summary."""
         systems = ', '.join(json.loads(change['systems_affected']))
-        
+
+        # HTML-escape all user-controlled values
+        e_title = html_escape(str(change['title']))
+        e_status = html_escape(str(change['status']))
+        e_category = html_escape(str(change['category']))
+        e_systems = html_escape(systems)
+        e_impact = html_escape(str(change['impact_level']))
+        e_implementer = html_escape(str(change['implementer']))
+        e_url = html_escape(change_url)
+
         html = f"""
 <!DOCTYPE html>
 <html>
@@ -111,9 +103,9 @@ Please use the link above to view the complete change record.
         .field {{ margin-bottom: 15px; }}
         .label {{ font-weight: bold; color: #555; }}
         .value {{ margin-left: 10px; }}
-        .button {{ display: inline-block; padding: 12px 24px; background-color: #0078d4; 
+        .button {{ display: inline-block; padding: 12px 24px; background-color: #0078d4;
                    color: white; text-decoration: none; border-radius: 4px; margin-top: 20px; }}
-        .footer {{ margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd; 
+        .footer {{ margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd;
                    font-size: 12px; color: #666; }}
     </style>
 </head>
@@ -122,46 +114,46 @@ Please use the link above to view the complete change record.
         <div class="header">
             <h1>IT Change Record Summary</h1>
         </div>
-        
+
         <div class="content">
             <div class="field">
                 <span class="label">Change ID:</span>
                 <span class="value">{change['id']}</span>
             </div>
-            
+
             <div class="field">
                 <span class="label">Title:</span>
-                <span class="value">{change['title']}</span>
+                <span class="value">{e_title}</span>
             </div>
-            
+
             <div class="field">
                 <span class="label">Status:</span>
-                <span class="value">{change['status']}</span>
+                <span class="value">{e_status}</span>
             </div>
-            
+
             <div class="field">
                 <span class="label">Category:</span>
-                <span class="value">{change['category']}</span>
+                <span class="value">{e_category}</span>
             </div>
-            
+
             <div class="field">
                 <span class="label">Systems Affected:</span>
-                <span class="value">{systems}</span>
+                <span class="value">{e_systems}</span>
             </div>
-            
+
             <div class="field">
                 <span class="label">Impact Level:</span>
-                <span class="value">{change['impact_level']}</span>
+                <span class="value">{e_impact}</span>
             </div>
-            
+
             <div class="field">
                 <span class="label">Implementer:</span>
-                <span class="value">{change['implementer']}</span>
+                <span class="value">{e_implementer}</span>
             </div>
-            
-            <a href="{change_url}" class="button">View Full Details</a>
+
+            <a href="{e_url}" class="button">View Full Details</a>
         </div>
-        
+
         <div class="footer">
             <p>This is an automated notification. Sensitive details are not included in this email.</p>
             <p>Please use the link above to view the complete change record.</p>

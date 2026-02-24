@@ -27,6 +27,7 @@
     </div>
 
     <form id="wizardForm" method="post" action="/changes">
+        <input type="hidden" id="csrf_token" name="csrf_token" value="{{ csrf_token }}">
         <!-- Step 1: Basics -->
         <div class="wizard-step active" id="step-1">
             <h2>Step 1: Basics</h2>
