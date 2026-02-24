@@ -4,8 +4,7 @@ from typing import List, Tuple
 
 class SecretDetector:
     """Detect potential secrets in change record text."""
-    
-    # Patterns for common secret types
+
     PATTERNS = [
         (r'-----BEGIN (?:RSA |DSA )?PRIVATE KEY-----', 'Private key'),
         (r'-----BEGIN CERTIFICATE-----', 'Certificate'),
@@ -25,67 +24,54 @@ class SecretDetector:
         (r'-----BEGIN OPENSSH PRIVATE KEY-----', 'SSH private key'),
         (r'PRIVATE KEY.*-----END', 'Private key block'),
     ]
-    
+
     @classmethod
     def scan(cls, text: str) -> List[Tuple[str, str]]:
         """
         Scan text for potential secrets.
-        
-        Args:
-            text: Text to scan
-            
+
         Returns:
-            List of tuples (pattern_name, matched_text_preview)
+            List of tuples (pattern_name, redacted_indicator)
         """
         if not text:
             return []
-        
+
         findings = []
-        text_lower = text.lower()
-        
+
         for pattern, name in cls.PATTERNS:
             matches = re.finditer(pattern, text, re.IGNORECASE | re.MULTILINE)
             for match in matches:
-                # Create a preview (first 50 chars of match)
-                preview = match.group(0)[:50]
-                if len(match.group(0)) > 50:
-                    preview += '...'
-                findings.append((name, preview))
-        
+                # Do NOT include matched text -- only report the type
+                findings.append((name, '[redacted]'))
+
         return findings
-    
+
     @classmethod
     def has_secrets(cls, change_data: dict) -> Tuple[bool, List[Tuple[str, str]]]:
-        """
-        Check if change data contains potential secrets.
-        
-        Args:
-            change_data: Dictionary with change record fields
-            
-        Returns:
-            Tuple of (has_secrets: bool, findings: List)
-        """
-        # Fields to scan for secrets
+        """Check if change data contains potential secrets."""
+        # Scan ALL free-text fields
         fields_to_scan = [
+            'title',
+            'implementer',
+            'ticket_id',
             'what_changed',
             'backout_plan',
             'outcome_notes',
             'post_change_issues',
             'links',
         ]
-        
+
         all_findings = []
-        
+
         for field in fields_to_scan:
             value = change_data.get(field)
             if value:
-                # Handle both string and list values
                 if isinstance(value, list):
                     value = ' '.join(str(v) for v in value)
                 else:
                     value = str(value)
-                
+
                 findings = cls.scan(value)
                 all_findings.extend(findings)
-        
+
         return len(all_findings) > 0, all_findings

@@ -1,10 +1,10 @@
-// Multi-step wizard with localStorage persistence
+// Multi-step wizard with sessionStorage persistence
 
 let currentStep = 1;
 let systemsTags = [];
 let linksTags = [];
 
-// Load draft from localStorage on page load
+// Load draft from sessionStorage on page load
 document.addEventListener('DOMContentLoaded', function() {
     loadDraft();
     setupTagInputs();
@@ -16,7 +16,7 @@ function nextStep(stepNumber) {
     if (!validateCurrentStep()) {
         return;
     }
-    
+
     saveDraft();
     showStep(stepNumber);
 }
@@ -27,15 +27,12 @@ function prevStep(stepNumber) {
 }
 
 function showStep(stepNumber) {
-    // Hide all steps
     document.querySelectorAll('.wizard-step').forEach(step => {
         step.classList.remove('active');
     });
-    
-    // Show target step
+
     document.getElementById(`step-${stepNumber}`).classList.add('active');
-    
-    // Update progress
+
     document.querySelectorAll('.step').forEach((step, index) => {
         if (index + 1 <= stepNumber) {
             step.classList.add('active');
@@ -43,7 +40,7 @@ function showStep(stepNumber) {
             step.classList.remove('active');
         }
     });
-    
+
     currentStep = stepNumber;
     window.scrollTo(0, 0);
 }
@@ -52,9 +49,9 @@ function showStep(stepNumber) {
 function validateCurrentStep() {
     const currentStepEl = document.getElementById(`step-${currentStep}`);
     const requiredFields = currentStepEl.querySelectorAll('[required]');
-    
+
     let isValid = true;
-    
+
     requiredFields.forEach(field => {
         if (!field.value && field.type !== 'radio') {
             field.style.borderColor = 'red';
@@ -70,36 +67,35 @@ function validateCurrentStep() {
             field.style.borderColor = '';
         }
     });
-    
+
     // Special validation for systems tags
     if (currentStep === 1 && systemsTags.length === 0) {
         document.getElementById('systems-input').style.borderColor = 'red';
         alert('Please add at least one affected system');
         isValid = false;
     }
-    
+
     // Backout plan validation
     if (currentStep === 2) {
         const impactLevel = document.getElementById('impact_level').value;
         const backoutPlan = document.getElementById('backout_plan').value;
-        
+
         if ((impactLevel === 'Medium' || impactLevel === 'High') && !backoutPlan.trim()) {
             document.getElementById('backout_plan').style.borderColor = 'red';
             alert('Backout plan is required for Medium and High impact changes');
             isValid = false;
         }
     }
-    
+
     if (!isValid) {
         alert('Please fill in all required fields');
     }
-    
+
     return isValid;
 }
 
 // Tag inputs
 function setupTagInputs() {
-    // Systems tags
     const systemsInput = document.getElementById('systems-input');
     systemsInput.addEventListener('keypress', function(e) {
         if (e.key === 'Enter') {
@@ -113,8 +109,7 @@ function setupTagInputs() {
             }
         }
     });
-    
-    // Links tags
+
     const linksInput = document.getElementById('links-input');
     linksInput.addEventListener('keypress', function(e) {
         if (e.key === 'Enter') {
@@ -136,14 +131,20 @@ function setupTagInputs() {
 function renderSystemsTags() {
     const container = document.getElementById('systems-tags');
     container.innerHTML = '';
-    
+
     systemsTags.forEach((tag, index) => {
         const tagEl = document.createElement('div');
         tagEl.className = 'tag-item';
-        tagEl.innerHTML = `
-            ${tag}
-            <span class="tag-remove" onclick="removeSystemTag(${index})">&times;</span>
-        `;
+
+        const textNode = document.createTextNode(tag + ' ');
+        tagEl.appendChild(textNode);
+
+        const removeSpan = document.createElement('span');
+        removeSpan.className = 'tag-remove';
+        removeSpan.textContent = '\u00d7';
+        removeSpan.addEventListener('click', () => removeSystemTag(index));
+        tagEl.appendChild(removeSpan);
+
         container.appendChild(tagEl);
     });
 }
@@ -151,14 +152,21 @@ function renderSystemsTags() {
 function renderLinksTags() {
     const container = document.getElementById('links-tags');
     container.innerHTML = '';
-    
+
     linksTags.forEach((tag, index) => {
         const tagEl = document.createElement('div');
         tagEl.className = 'tag-item';
-        tagEl.innerHTML = `
-            ${tag.substring(0, 50)}${tag.length > 50 ? '...' : ''}
-            <span class="tag-remove" onclick="removeLinkTag(${index})">&times;</span>
-        `;
+
+        const display = tag.length > 50 ? tag.substring(0, 50) + '...' : tag;
+        const textNode = document.createTextNode(display + ' ');
+        tagEl.appendChild(textNode);
+
+        const removeSpan = document.createElement('span');
+        removeSpan.className = 'tag-remove';
+        removeSpan.textContent = '\u00d7';
+        removeSpan.addEventListener('click', () => removeLinkTag(index));
+        tagEl.appendChild(removeSpan);
+
         container.appendChild(tagEl);
     });
 }
@@ -186,7 +194,7 @@ function checkBackoutRequired() {
     const backoutGroup = document.getElementById('backout-group');
     const backoutRequired = document.getElementById('backout-required');
     const backoutPlan = document.getElementById('backout_plan');
-    
+
     if (impactLevel === 'Medium' || impactLevel === 'High') {
         backoutRequired.style.display = 'inline';
         backoutPlan.required = true;
@@ -196,7 +204,7 @@ function checkBackoutRequired() {
     }
 }
 
-// Draft persistence
+// Draft persistence (sessionStorage -- cleared when tab closes)
 function saveDraft() {
     const formData = {
         title: document.getElementById('title').value,
@@ -216,18 +224,17 @@ function saveDraft() {
         outcome_notes: document.getElementById('outcome_notes').value,
         post_change_issues: document.getElementById('post_change_issues').value,
     };
-    
-    localStorage.setItem('changeDraft', JSON.stringify(formData));
+
+    sessionStorage.setItem('changeDraft', JSON.stringify(formData));
 }
 
 function loadDraft() {
-    const draft = localStorage.getItem('changeDraft');
+    const draft = sessionStorage.getItem('changeDraft');
     if (!draft) return;
-    
+
     try {
         const data = JSON.parse(draft);
-        
-        // Only load if user confirms
+
         if (confirm('You have a saved draft. Would you like to restore it?')) {
             document.getElementById('title').value = data.title || '';
             document.getElementById('category').value = data.category || '';
@@ -238,12 +245,12 @@ function loadDraft() {
             document.getElementById('implementer').value = data.implementer || '';
             document.getElementById('impact_level').value = data.impact_level || '';
             document.getElementById('user_impact').value = data.user_impact || '';
-            
+
             if (data.maintenance_window) {
                 const radio = document.querySelector(`[name="maintenance_window"][value="${data.maintenance_window}"]`);
                 if (radio) radio.checked = true;
             }
-            
+
             document.getElementById('backout_plan').value = data.backout_plan || '';
             document.getElementById('what_changed').value = data.what_changed || '';
             document.getElementById('ticket_id').value = data.ticket_id || '';
@@ -253,29 +260,34 @@ function loadDraft() {
             document.getElementById('outcome_notes').value = data.outcome_notes || '';
             document.getElementById('post_change_issues').value = data.post_change_issues || '';
         } else {
-            localStorage.removeItem('changeDraft');
+            sessionStorage.removeItem('changeDraft');
         }
     } catch (e) {
         console.error('Error loading draft:', e);
-        localStorage.removeItem('changeDraft');
+        sessionStorage.removeItem('changeDraft');
     }
 }
 
 function clearDraft() {
-    localStorage.removeItem('changeDraft');
+    sessionStorage.removeItem('changeDraft');
 }
 
 // Form submission
 document.getElementById('wizardForm').addEventListener('submit', async function(e) {
     e.preventDefault();
-    
+
     if (!validateCurrentStep()) {
         return;
     }
-    
-    // Prepare form data
+
     const formData = new FormData();
-    
+
+    // Include CSRF token
+    const csrfInput = document.getElementById('csrf_token');
+    if (csrfInput) {
+        formData.append('csrf_token', csrfInput.value);
+    }
+
     formData.append('title', document.getElementById('title').value);
     formData.append('category', document.getElementById('category').value);
     systemsTags.forEach(tag => formData.append('systems_affected', tag));
@@ -292,47 +304,42 @@ document.getElementById('wizardForm').addEventListener('submit', async function(
     formData.append('status', document.getElementById('status').value);
     formData.append('outcome_notes', document.getElementById('outcome_notes').value);
     formData.append('post_change_issues', document.getElementById('post_change_issues').value);
-    
+
     const emailCopy = document.getElementById('email_copy');
     if (emailCopy) {
         formData.append('email_copy', emailCopy.checked ? 'true' : 'false');
     }
-    
+
     const confirmSecrets = document.getElementById('confirm_no_secrets');
     if (confirmSecrets) {
         formData.append('confirm_no_secrets', confirmSecrets.checked ? 'true' : 'false');
     }
-    
-    // Disable submit button
+
     const submitBtn = document.getElementById('submitBtn');
     submitBtn.disabled = true;
     submitBtn.textContent = 'Creating...';
-    
+
     try {
         const response = await fetch('/changes', {
             method: 'POST',
+            headers: {'Accept': 'application/json'},
             body: formData
         });
-        
+
         if (response.ok) {
             const result = await response.json();
-            
-            // Clear draft
             clearDraft();
-            
-            // Redirect to change detail
             window.location.href = `/changes/${result.change_id}`;
         } else {
             const result = await response.json();
-            
-            // Check for secret detection
+
             if (result.detail && result.detail.includes('secret')) {
                 document.getElementById('secret-warning').style.display = 'block';
                 document.getElementById('secret-details').textContent = result.detail;
             } else {
                 alert('Error: ' + (result.detail || 'Failed to create change record'));
             }
-            
+
             submitBtn.disabled = false;
             submitBtn.textContent = 'Create Change Record';
         }
