@@ -220,15 +220,24 @@ async def create_quick_log(
         'Rolled Back': 'Rolled Back', 'Failed': 'Failed',
     }
 
+    impact_map = {
+        'LOW': 'Low', 'MEDIUM': 'Medium', 'HIGH': 'High',
+        'Low': 'Low', 'Medium': 'Medium', 'High': 'High',
+    }
+
     raw_category = form_data.get('category', '')
     raw_status = form_data.get('status', 'Completed')
+    raw_impact = form_data.get('impact_level', 'Low')
     category = category_map.get(raw_category.upper(), category_map.get(raw_category))
     status_val = status_map.get(raw_status.upper(), status_map.get(raw_status))
+    impact_level = impact_map.get(raw_impact.upper(), impact_map.get(raw_impact)) or 'Low'
 
     if category not in VALID_CATEGORIES:
         raise HTTPException(status_code=400, detail="Invalid category")
     if status_val not in VALID_STATUSES:
         raise HTTPException(status_code=400, detail="Invalid status")
+    if impact_level not in VALID_IMPACTS:
+        raise HTTPException(status_code=400, detail="Invalid impact level")
 
     title = form_data.get('title', '').strip()
     systems = form_data.getlist('systems_affected')
@@ -240,8 +249,25 @@ async def create_quick_log(
     if not systems:
         raise HTTPException(status_code=400, detail="At least one system is required")
 
-    # Secret detection on the minimal data
-    check_data = {'title': title, 'what_changed': title}
+    is_high = impact_level == 'High'
+
+    # For high impact, require expanded fields
+    what_changed = form_data.get('what_changed', '').strip() if is_high else title
+    backout_plan = form_data.get('backout_plan', '').strip() if is_high else None
+    maintenance_window = form_data.get('maintenance_window') == 'true' if is_high else False
+    user_impact_val = form_data.get('user_impact', 'None') if is_high else 'None'
+    outcome_notes = form_data.get('outcome_notes', '').strip() or None if is_high else None
+
+    if is_high:
+        if not what_changed:
+            raise HTTPException(status_code=400, detail="What Changed is required for High impact changes")
+        if not backout_plan:
+            raise HTTPException(status_code=400, detail="Backout plan is required for High impact changes")
+
+    # Secret detection
+    check_data = {'title': title, 'what_changed': what_changed or title}
+    if backout_plan:
+        check_data['backout_plan'] = backout_plan
     has_secrets, findings = SecretDetector.has_secrets(check_data)
     confirm_no_secrets = form_data.get('confirm_no_secrets') == 'true'
     if has_secrets and not confirm_no_secrets:
@@ -256,13 +282,15 @@ async def create_quick_log(
         category=category,
         systems_affected=json.dumps(systems),
         implementer=user.get('email', ''),
-        impact_level='Low',
-        user_impact='None',
-        maintenance_window=False,
-        what_changed=title,
+        impact_level=impact_level,
+        user_impact=user_impact_val,
+        maintenance_window=maintenance_window,
+        what_changed=what_changed or title,
+        backout_plan=backout_plan,
+        outcome_notes=outcome_notes,
         status=status_val,
         created_by=user.get('email', ''),
-        change_type='quick'
+        change_type='full' if is_high else 'quick'
     )
 
     db.add(change)
@@ -275,7 +303,7 @@ async def create_quick_log(
         user_email=user.get('email', ''),
         user_name=user.get('name', ''),
         change_id=change.id,
-        details={'change_type': 'quick'},
+        details={'change_type': 'full' if is_high else 'quick'},
         ip_address=get_client_ip(request)
     )
 

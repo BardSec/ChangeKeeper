@@ -477,6 +477,18 @@ body {
     flex: 1;
 }
 
+.section-divider {
+    border: none;
+    border-top: 1px solid var(--border-color);
+    margin: 1.5rem 0 1rem;
+}
+
+.expand-notice {
+    color: var(--primary-color);
+    font-weight: 500;
+    margin-bottom: 1rem;
+}
+
 .wizard-progress {
     display: flex;
     justify-content: space-between;

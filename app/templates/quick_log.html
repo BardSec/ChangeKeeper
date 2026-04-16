@@ -34,13 +34,11 @@
                 </div>
 
                 <div class="form-group form-group-half">
-                    <label for="status">Status</label>
-                    <select id="status" name="status">
-                        <option value="Completed" selected>Completed</option>
-                        <option value="Planned">Planned</option>
-                        <option value="In Progress">In Progress</option>
-                        <option value="Rolled Back">Rolled Back</option>
-                        <option value="Failed">Failed</option>
+                    <label for="impact_level">Impact Level <span class="required">*</span></label>
+                    <select id="impact_level" name="impact_level" required>
+                        <option value="Low" selected>Low</option>
+                        <option value="Medium">Medium</option>
+                        <option value="High">High</option>
                     </select>
                 </div>
             </div>
@@ -53,6 +51,66 @@
                            placeholder="Type a system and press Enter (e.g., WiFi, Canvas, AD)">
                 </div>
                 <small class="help-text">Press Enter to add each system</small>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group form-group-half">
+                    <label for="status">Status</label>
+                    <select id="status" name="status">
+                        <option value="Completed" selected>Completed</option>
+                        <option value="Planned">Planned</option>
+                        <option value="In Progress">In Progress</option>
+                        <option value="Rolled Back">Rolled Back</option>
+                        <option value="Failed">Failed</option>
+                    </select>
+                </div>
+
+                <div class="form-group form-group-half" id="user-impact-group" style="display: none;">
+                    <label for="user_impact">User Impact <span class="required">*</span></label>
+                    <select id="user_impact" name="user_impact">
+                        <option value="None">None</option>
+                        <option value="Some">Some - Limited users affected</option>
+                        <option value="Many">Many - Significant user base affected</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Expanded fields for High impact -->
+            <div id="high-impact-fields" style="display: none;">
+                <hr class="section-divider">
+                <p class="expand-notice">High impact changes need additional detail.</p>
+
+                <div class="form-group">
+                    <label for="what_changed">What Changed <span class="required">*</span></label>
+                    <textarea id="what_changed" name="what_changed" rows="4"
+                              placeholder="Describe the technical details of what was changed..."></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label for="backout_plan">Backout Plan <span class="required">*</span></label>
+                    <textarea id="backout_plan" name="backout_plan" rows="3"
+                              placeholder="Describe how to revert this change if issues occur..."></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label for="maintenance_window">Maintenance Window Used</label>
+                    <div class="radio-group">
+                        <label class="radio-label">
+                            <input type="radio" name="maintenance_window" value="true">
+                            Yes - During scheduled maintenance
+                        </label>
+                        <label class="radio-label">
+                            <input type="radio" name="maintenance_window" value="false" checked>
+                            No - Business hours or unscheduled
+                        </label>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="outcome_notes">Outcome Notes</label>
+                    <textarea id="outcome_notes" name="outcome_notes" rows="3"
+                              placeholder="Summary of results, lessons learned..."></textarea>
+                </div>
             </div>
 
             <div id="secret-warning" class="alert alert-warning" style="display: none;">
