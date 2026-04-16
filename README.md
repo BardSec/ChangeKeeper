@@ -4,14 +4,19 @@ A lightweight, secure web application for K–12 IT teams to record, track, and 
 
 ## Features
 
+- **Quick Log** - Log routine changes in 30 seconds (title, category, impact, systems, status)
+- **Full Change Wizard** - Guided 4-step form for complex changes with risk assessment and backout plans
+- **Smart Escalation** - Selecting "High" impact on a Quick Log auto-expands to full change fields
+- **Promotion** - Promote any Quick Log to a Full Change later, preserving the original record
+- **Calendar View** - Monthly calendar showing changes color-coded by impact level, click to drill into daily details
 - **Microsoft Entra ID (Azure AD) SSO** - Secure authentication using OIDC
-- **Multi-step Change Wizard** - Guided form with localStorage draft persistence
+- **Google Workspace SSO** - Optional Google sign-in alongside Microsoft
 - **Role-based Access Control** - Admin, Auditor, and User roles
-- **Search and Filtering** - Find changes by category, system, impact, date, etc.
+- **Search and Filtering** - Find changes by category, system, impact, date, type, etc.
 - **PDF Export** - Generate professional change record PDFs
 - **CSV Export** - Download reports for date ranges (admin only)
 - **Secret Detection** - Prevent accidental credential exposure
-- **Audit Logging** - Track all create, edit, and export actions
+- **Audit Logging** - Track all create, edit, promote, and export actions
 - **Email Notifications** - Optional email summaries (pluggable module)
 
 ## Tech Stack
@@ -339,9 +344,18 @@ pytest tests/
 - **Auditor**: Read-only access to all changes
 - **Admin**: Full access + CSV export + can edit implementer field
 
-### Creating a Change Record
+### Quick Log (Routine Changes)
 
-1. Click "New Change" in navigation
+1. Click "Quick Log" in navigation
+2. Enter: title, category, impact level, systems affected, status
+3. If impact is **High**, additional fields expand automatically (backout plan, detailed description, etc.)
+4. Click "Save Quick Log"
+
+Quick logs can be **promoted** to full changes later from the change detail page.
+
+### Full Change (Complex Changes)
+
+1. Click "Full Change" in navigation
 2. Complete the 4-step wizard:
    - **Step 1 - Basics:** Title, category, systems, timing, implementer
    - **Step 2 - Risk:** Impact level, user impact, maintenance window, backout plan
@@ -350,6 +364,14 @@ pytest tests/
 3. Review secret detection warnings (if any)
 4. Click "Create Change Record"
 
+### Calendar View
+
+1. Click "Calendar" in navigation
+2. Browse months with Previous/Next buttons
+3. Changes appear as color-coded dots: green (Low), yellow (Medium), red (High)
+4. Click any day to see all changes for that date
+5. Click a change to view its full detail
+
 ### Searching Changes
 
 Use the dashboard filters to search by:
@@ -357,6 +379,7 @@ Use the dashboard filters to search by:
 - Category
 - Impact level
 - Status
+- Change type (Quick Log / Full Change)
 - Date range
 - Implementer
 - System tag

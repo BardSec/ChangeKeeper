@@ -27,3 +27,8 @@ postgres_data/
 
 # Docker
 docker-compose.override.yml
+
+# Session tracking (local only)
+sessions.md
+wins.md
+futureplans.md
