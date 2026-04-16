@@ -175,6 +175,57 @@ async def new_change_wizard(
     })
 
 
+@router.get("/changes/calendar", response_class=HTMLResponse)
+async def calendar_view(
+    request: Request,
+    user: dict = Depends(get_current_user)
+):
+    """Display calendar view of changes."""
+    return templates.TemplateResponse("calendar.html", {
+        "request": request,
+        "user": user,
+    })
+
+
+@router.get("/changes/calendar/events")
+async def calendar_events(
+    request: Request,
+    year: int,
+    month: int,
+    db: Session = Depends(get_db),
+    user: dict = Depends(get_current_user)
+):
+    """Return changes for a given month as JSON for the calendar."""
+    from calendar import monthrange
+
+    if month < 1 or month > 12 or year < 2000 or year > 2100:
+        raise HTTPException(status_code=400, detail="Invalid date")
+
+    _, last_day = monthrange(year, month)
+    start = datetime(year, month, 1)
+    end = datetime(year, month, last_day, 23, 59, 59)
+
+    changes = db.query(Change).filter(
+        Change.created_at >= start,
+        Change.created_at <= end
+    ).order_by(Change.created_at).all()
+
+    events = []
+    for c in changes:
+        events.append({
+            "id": c.id,
+            "title": c.title,
+            "date": c.created_at.strftime('%Y-%m-%d'),
+            "category": c.category.value if hasattr(c.category, 'value') else c.category,
+            "impact": c.impact_level.value if hasattr(c.impact_level, 'value') else c.impact_level,
+            "status": c.status.value if hasattr(c.status, 'value') else c.status,
+            "change_type": c.change_type.value if hasattr(c.change_type, 'value') else (c.change_type or 'full'),
+            "implementer": c.implementer,
+        })
+
+    return {"year": year, "month": month, "events": events}
+
+
 @router.get("/changes/quick", response_class=HTMLResponse)
 async def quick_log_form(
     request: Request,

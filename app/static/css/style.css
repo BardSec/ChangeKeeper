@@ -489,6 +489,248 @@ body {
     margin-bottom: 1rem;
 }
 
+/* Calendar */
+.calendar-container {
+    max-width: 1100px;
+    margin: 0 auto;
+}
+
+.calendar-nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.calendar-nav h2 {
+    font-size: 1.5rem;
+}
+
+.calendar-legend {
+    display: flex;
+    gap: 1.5rem;
+    margin-bottom: 1rem;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+}
+
+.legend-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    display: inline-block;
+}
+
+.dot-low { background-color: #28a745; }
+.dot-medium { background-color: #ffc107; }
+.dot-high { background-color: #dc3545; }
+
+.calendar-grid {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    overflow: hidden;
+}
+
+.calendar-header {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    background: var(--primary-color);
+    color: white;
+}
+
+.calendar-day-name {
+    padding: 0.75rem;
+    text-align: center;
+    font-weight: 600;
+    font-size: 0.85rem;
+}
+
+.calendar-body {
+    /* rows are appended here */
+}
+
+.calendar-week {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.calendar-week:last-child {
+    border-bottom: none;
+}
+
+.calendar-cell {
+    min-height: 100px;
+    padding: 0.5rem;
+    border-right: 1px solid var(--border-color);
+    position: relative;
+    transition: background-color 0.15s;
+}
+
+.calendar-cell:last-child {
+    border-right: none;
+}
+
+.calendar-cell-empty {
+    min-height: 100px;
+    padding: 0.5rem;
+    border-right: 1px solid var(--border-color);
+    background-color: #fafafa;
+}
+
+.calendar-cell-empty:last-child {
+    border-right: none;
+}
+
+.calendar-cell-has-events {
+    cursor: pointer;
+}
+
+.calendar-cell-has-events:hover {
+    background-color: #f0f7ff;
+}
+
+.calendar-cell-today {
+    background-color: #fffde7;
+}
+
+.calendar-cell-today:hover {
+    background-color: #fff8c4;
+}
+
+.calendar-cell-number {
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: var(--text-muted);
+    margin-bottom: 0.25rem;
+}
+
+.calendar-cell-today .calendar-cell-number {
+    color: var(--primary-color);
+}
+
+.calendar-cell-dots {
+    display: flex;
+    gap: 3px;
+    flex-wrap: wrap;
+    margin-bottom: 0.25rem;
+}
+
+.event-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    display: inline-block;
+}
+
+.event-dot-more {
+    font-size: 0.65rem;
+    color: var(--text-muted);
+    line-height: 8px;
+}
+
+.calendar-cell-preview {
+    font-size: 0.75rem;
+    color: var(--text-color);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.calendar-cell-count {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    margin-top: 0.15rem;
+}
+
+/* Day detail panel */
+.day-detail {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    margin-top: 1.5rem;
+    overflow: hidden;
+}
+
+.day-detail-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 1.5rem;
+    background: var(--light-gray);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.day-detail-header h3 {
+    font-size: 1.1rem;
+    margin: 0;
+}
+
+.btn-close {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: var(--text-muted);
+    padding: 0 0.25rem;
+    line-height: 1;
+}
+
+.btn-close:hover {
+    color: var(--text-color);
+}
+
+.day-detail-list {
+    padding: 0.5rem 0;
+}
+
+.day-detail-item {
+    display: block;
+    padding: 0.75rem 1.5rem;
+    text-decoration: none;
+    color: var(--text-color);
+    border-bottom: 1px solid var(--border-color);
+    transition: background-color 0.15s;
+}
+
+.day-detail-item:last-child {
+    border-bottom: none;
+}
+
+.day-detail-item:hover {
+    background-color: #f0f7ff;
+}
+
+.day-detail-item-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.35rem;
+}
+
+.day-detail-item-title {
+    font-weight: 500;
+}
+
+.day-detail-item-meta {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.day-detail-implementer {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+}
+
 .wizard-progress {
     display: flex;
     justify-content: space-between;
