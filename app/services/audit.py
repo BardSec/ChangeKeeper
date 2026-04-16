@@ -102,6 +102,24 @@ class AuditService:
         )
     
     @staticmethod
+    def log_change_promote(
+        db: Session,
+        user: dict,
+        change_id: int,
+        ip_address: Optional[str] = None
+    ):
+        """Log quick log promotion to full change."""
+        return AuditService.log_action(
+            db=db,
+            action='promote',
+            user_email=user.get('email', ''),
+            user_name=user.get('name', ''),
+            change_id=change_id,
+            details={'from_type': 'quick', 'to_type': 'full'},
+            ip_address=ip_address
+        )
+
+    @staticmethod
     def log_view(
         db: Session,
         user: dict,

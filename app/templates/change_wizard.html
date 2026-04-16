@@ -1,10 +1,10 @@
 {% extends "base.html" %}
 
-{% block title %}New Change - ChangeKeeper{% endblock %}
+{% block title %}{% if promote_mode is defined and promote_mode %}Promote Quick Log{% else %}New Change{% endif %} - ChangeKeeper{% endblock %}
 
 {% block content %}
 <div class="wizard-container">
-    <h1>Create New Change Record</h1>
+    <h1>{% if promote_mode is defined and promote_mode %}Promote Quick Log to Full Change{% else %}Create New Change Record{% endif %}</h1>
     
     <!-- Progress Steps -->
     <div class="wizard-progress">
@@ -26,7 +26,7 @@
         </div>
     </div>
 
-    <form id="wizardForm" method="post" action="/changes">
+    <form id="wizardForm" method="post" action="{% if promote_mode is defined and promote_mode %}/changes/{{ promote_change_id }}/promote{% else %}/changes{% endif %}">
         <input type="hidden" id="csrf_token" name="csrf_token" value="{{ csrf_token }}">
         <!-- Step 1: Basics -->
         <div class="wizard-step active" id="step-1">
@@ -215,7 +215,7 @@
             
             <div class="form-actions">
                 <button type="button" class="btn btn-secondary" onclick="prevStep(3)">Back</button>
-                <button type="submit" class="btn btn-primary" id="submitBtn">Create Change Record</button>
+                <button type="submit" class="btn btn-primary" id="submitBtn">{% if promote_mode is defined and promote_mode %}Promote to Full Change{% else %}Create Change Record{% endif %}</button>
             </div>
         </div>
     </form>
@@ -223,5 +223,8 @@
 {% endblock %}
 
 {% block extra_scripts %}
-<script src="/static/js/wizard.js"></script>
+{% if promote_mode is defined and promote_mode %}
+<script>window.PREFILL_DATA = {{ prefill_json|safe }};</script>
+{% endif %}
+<script src="/static/js/wizard.js?v=2.1.0"></script>
 {% endblock %}

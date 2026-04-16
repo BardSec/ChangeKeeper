@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+
+{% block title %}Quick Log - ChangeKeeper{% endblock %}
+
+{% block content %}
+<div class="quick-log-container">
+    <div class="page-header">
+        <h1>Quick Log</h1>
+        <p class="subtitle">Log a small change in seconds. You can promote to a full change later.</p>
+    </div>
+
+    <form id="quickLogForm" method="post" action="/changes/quick">
+        <input type="hidden" id="csrf_token" name="csrf_token" value="{{ csrf_token }}">
+
+        <div class="quick-log-card">
+            <div class="form-group">
+                <label for="title">What did you do? <span class="required">*</span></label>
+                <input type="text" id="title" name="title" required maxlength="500"
+                       placeholder="e.g., Updated WiFi SSID on Building 3 APs" autofocus>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group form-group-half">
+                    <label for="category">Category <span class="required">*</span></label>
+                    <select id="category" name="category" required>
+                        <option value="">Select...</option>
+                        <option value="Network">Network</option>
+                        <option value="Identity">Identity</option>
+                        <option value="Endpoint">Endpoint</option>
+                        <option value="Application">Application</option>
+                        <option value="Vendor">Vendor</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+
+                <div class="form-group form-group-half">
+                    <label for="status">Status</label>
+                    <select id="status" name="status">
+                        <option value="Completed" selected>Completed</option>
+                        <option value="Planned">Planned</option>
+                        <option value="In Progress">In Progress</option>
+                        <option value="Rolled Back">Rolled Back</option>
+                        <option value="Failed">Failed</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Systems Affected <span class="required">*</span></label>
+                <div class="tag-input-container">
+                    <div id="systems-tags" class="tags-list"></div>
+                    <input type="text" id="systems-input"
+                           placeholder="Type a system and press Enter (e.g., WiFi, Canvas, AD)">
+                </div>
+                <small class="help-text">Press Enter to add each system</small>
+            </div>
+
+            <div id="secret-warning" class="alert alert-warning" style="display: none;">
+                <strong>Potential secrets detected!</strong>
+                <p id="secret-details"></p>
+                <label>
+                    <input type="checkbox" id="confirm_no_secrets">
+                    I've reviewed and confirm this is safe to save
+                </label>
+            </div>
+
+            <div class="form-actions">
+                <a href="/" class="btn btn-secondary">Cancel</a>
+                <button type="submit" class="btn btn-primary" id="submitBtn">Save Quick Log</button>
+            </div>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="/static/js/quick_log.js?v=2.1.0"></script>
+{% endblock %}

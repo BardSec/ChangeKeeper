@@ -240,6 +240,12 @@ body {
     color: var(--text-color);
 }
 
+.header-actions {
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+}
+
 /* Filters */
 .filters-panel {
     background: white;
@@ -404,6 +410,26 @@ body {
     color: #721c24;
 }
 
+.badge-type-quick {
+    background-color: #e8f5e9;
+    color: #2e7d32;
+    font-size: 0.75rem;
+    padding: 0.125rem 0.5rem;
+    border-radius: 4px;
+    margin-left: 0.5rem;
+    vertical-align: middle;
+}
+
+.badge-type-full {
+    background-color: #e3f2fd;
+    color: #1565c0;
+    font-size: 0.75rem;
+    padding: 0.125rem 0.5rem;
+    border-radius: 4px;
+    margin-left: 0.5rem;
+    vertical-align: middle;
+}
+
 .no-results {
     text-align: center;
     padding: 3rem;
@@ -427,6 +453,28 @@ body {
 .wizard-container {
     max-width: 900px;
     margin: 0 auto;
+}
+
+/* Quick Log */
+.quick-log-container {
+    max-width: 700px;
+    margin: 0 auto;
+}
+
+.quick-log-container .subtitle {
+    color: var(--text-muted);
+    margin-bottom: 1rem;
+}
+
+.quick-log-card {
+    background: white;
+    border-radius: 8px;
+    padding: 2rem;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.form-group-half {
+    flex: 1;
 }
 
 .wizard-progress {

@@ -6,7 +6,10 @@
 <div class="dashboard">
     <div class="page-header">
         <h1>Change Records</h1>
-        <a href="/changes/new" class="btn btn-primary">Create New Change</a>
+        <div class="header-actions">
+            <a href="/changes/quick" class="btn btn-primary">Quick Log</a>
+            <a href="/changes/new" class="btn btn-secondary">Full Change</a>
+        </div>
     </div>
 
     <!-- Filters -->
@@ -52,6 +55,15 @@
                         <option value="Completed" {% if filters.status == "Completed" %}selected{% endif %}>Completed</option>
                         <option value="Rolled Back" {% if filters.status == "Rolled Back" %}selected{% endif %}>Rolled Back</option>
                         <option value="Failed" {% if filters.status == "Failed" %}selected{% endif %}>Failed</option>
+                    </select>
+                </div>
+
+                <div class="filter-group">
+                    <label for="change_type">Type:</label>
+                    <select id="change_type" name="change_type">
+                        <option value="">All</option>
+                        <option value="quick" {% if filters.change_type == "quick" %}selected{% endif %}>Quick Log</option>
+                        <option value="full" {% if filters.change_type == "full" %}selected{% endif %}>Full Change</option>
                     </select>
                 </div>
             </div>
@@ -121,6 +133,9 @@
                             <a href="/changes/{{ change.id }}" class="change-title">
                                 {{ change.title }}
                             </a>
+                            {% if change.change_type and change.change_type.value == 'quick' %}
+                            <span class="badge badge-type-quick">Quick</span>
+                            {% endif %}
                             {% if change.systems_list %}
                             <div class="systems-tags">
                                 {% for system in change.systems_list[:3] %}

@@ -10,6 +10,11 @@
             <p class="subtitle">{{ change.title }}</p>
         </div>
         <div class="header-actions">
+            {% if change.change_type and change.change_type.value == 'quick' %}
+                {% if user.role == 'admin' or change.created_by == user.email %}
+                <a href="/changes/{{ change.id }}/promote" class="btn btn-primary">Promote to Full Change</a>
+                {% endif %}
+            {% endif %}
             <a href="/changes/{{ change.id }}/pdf" class="btn btn-secondary">
                 📄 Download PDF
             </a>
@@ -31,6 +36,16 @@
         <!-- Metadata Card -->
         <div class="detail-card">
             <h3>Metadata</h3>
+            <div class="detail-row">
+                <span class="label">Type:</span>
+                <span class="value">
+                    {% if change.change_type and change.change_type.value == 'quick' %}
+                    <span class="badge badge-type-quick">Quick Log</span>
+                    {% else %}
+                    <span class="badge badge-type-full">Full Change</span>
+                    {% endif %}
+                </span>
+            </div>
             <div class="detail-row">
                 <span class="label">Created:</span>
                 <span class="value">{{ change.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</span>

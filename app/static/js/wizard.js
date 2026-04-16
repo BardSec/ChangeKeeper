@@ -6,7 +6,11 @@ let linksTags = [];
 
 // Load draft from sessionStorage on page load
 document.addEventListener('DOMContentLoaded', function() {
-    loadDraft();
+    if (window.PREFILL_DATA) {
+        loadPrefill(window.PREFILL_DATA);
+    } else {
+        loadDraft();
+    }
     setupTagInputs();
     setupBackoutValidation();
 });
@@ -204,6 +208,35 @@ function checkBackoutRequired() {
     }
 }
 
+// Pre-fill fields from promotion data
+function loadPrefill(data) {
+    document.getElementById('title').value = data.title || '';
+    document.getElementById('category').value = data.category || '';
+    systemsTags = data.systems_affected || [];
+    renderSystemsTags();
+    document.getElementById('planned_start').value = data.planned_start || '';
+    document.getElementById('planned_end').value = data.planned_end || '';
+    document.getElementById('implementer').value = data.implementer || '';
+    document.getElementById('impact_level').value = data.impact_level || '';
+    document.getElementById('user_impact').value = data.user_impact || '';
+
+    if (data.maintenance_window) {
+        var radio = document.querySelector('[name="maintenance_window"][value="' + data.maintenance_window + '"]');
+        if (radio) radio.checked = true;
+    }
+
+    document.getElementById('backout_plan').value = data.backout_plan || '';
+    document.getElementById('what_changed').value = data.what_changed || '';
+    document.getElementById('ticket_id').value = data.ticket_id || '';
+    linksTags = data.links || [];
+    renderLinksTags();
+    document.getElementById('status').value = data.status || 'Completed';
+    document.getElementById('outcome_notes').value = data.outcome_notes || '';
+    document.getElementById('post_change_issues').value = data.post_change_issues || '';
+
+    checkBackoutRequired();
+}
+
 // Draft persistence (sessionStorage -- cleared when tab closes)
 function saveDraft() {
     const formData = {
@@ -317,10 +350,14 @@ document.getElementById('wizardForm').addEventListener('submit', async function(
 
     const submitBtn = document.getElementById('submitBtn');
     submitBtn.disabled = true;
-    submitBtn.textContent = 'Creating...';
+    submitBtn.textContent = window.PREFILL_DATA ? 'Promoting...' : 'Creating...';
+
+    var isPromotion = !!window.PREFILL_DATA;
+    var submitUrl = document.getElementById('wizardForm').action;
+    var defaultBtnText = isPromotion ? 'Promote to Full Change' : 'Create Change Record';
 
     try {
-        const response = await fetch('/changes', {
+        const response = await fetch(submitUrl, {
             method: 'POST',
             headers: {'Accept': 'application/json'},
             body: formData
@@ -328,7 +365,7 @@ document.getElementById('wizardForm').addEventListener('submit', async function(
 
         if (response.ok) {
             const result = await response.json();
-            clearDraft();
+            if (!isPromotion) clearDraft();
             window.location.href = `/changes/${result.change_id}`;
         } else {
             const result = await response.json();
@@ -337,16 +374,16 @@ document.getElementById('wizardForm').addEventListener('submit', async function(
                 document.getElementById('secret-warning').style.display = 'block';
                 document.getElementById('secret-details').textContent = result.detail;
             } else {
-                alert('Error: ' + (result.detail || 'Failed to create change record'));
+                alert('Error: ' + (result.detail || 'Failed to save change record'));
             }
 
             submitBtn.disabled = false;
-            submitBtn.textContent = 'Create Change Record';
+            submitBtn.textContent = defaultBtnText;
         }
     } catch (error) {
         alert('Network error: ' + error.message);
         submitBtn.disabled = false;
-        submitBtn.textContent = 'Create Change Record';
+        submitBtn.textContent = defaultBtnText;
     }
 });
 

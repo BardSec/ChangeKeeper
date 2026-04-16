@@ -55,7 +55,7 @@ async def export_changes_csv(
     writer = csv.writer(output)
 
     writer.writerow([
-        'ID', 'Created At', 'Created By', 'Updated At', 'Title',
+        'ID', 'Type', 'Created At', 'Created By', 'Updated At', 'Title',
         'Category', 'Systems Affected', 'Planned Start', 'Planned End',
         'Implementer', 'Impact Level', 'User Impact', 'Maintenance Window',
         'Backout Plan', 'What Changed', 'Ticket/Issue ID', 'Links',
@@ -68,6 +68,7 @@ async def export_changes_csv(
 
         writer.writerow([
             change.id,
+            change.change_type.value if hasattr(change.change_type, 'value') else (change.change_type or 'full'),
             change.created_at.strftime('%Y-%m-%d %H:%M:%S') if change.created_at else '',
             _sanitize_csv_cell(change.created_by),
             change.updated_at.strftime('%Y-%m-%d %H:%M:%S') if change.updated_at else '',

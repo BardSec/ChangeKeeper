@@ -38,6 +38,12 @@ class StatusEnum(str, enum.Enum):
     FAILED = "Failed"
 
 
+class ChangeTypeEnum(str, enum.Enum):
+    """Quick log vs full change."""
+    QUICK = "quick"
+    FULL = "full"
+
+
 class Change(Base):
     """Change record model."""
     __tablename__ = "changes"
@@ -84,6 +90,15 @@ class Change(Base):
     outcome_notes = Column(Text, nullable=True)
     post_change_issues = Column(Text, nullable=True)
     
+    # Type
+    change_type = Column(
+        Enum(ChangeTypeEnum, values_callable=lambda obj: [e.value for e in obj]),
+        nullable=False,
+        default=ChangeTypeEnum.FULL,
+        server_default='full',
+        index=True
+    )
+
     # Metadata
     created_by = Column(String(255), nullable=False, index=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False, index=True)

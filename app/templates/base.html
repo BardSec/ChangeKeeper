@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}ChangeKeeper{% endblock %}</title>
-    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="stylesheet" href="/static/css/style.css?v=2.0.0">
     {% block extra_head %}{% endblock %}
 </head>
 <body>
@@ -16,7 +16,8 @@
             </div>
             <div class="nav-menu">
                 <a href="/" class="nav-link">Dashboard</a>
-                <a href="/changes/new" class="nav-link">New Change</a>
+                <a href="/changes/quick" class="nav-link">Quick Log</a>
+                <a href="/changes/new" class="nav-link">Full Change</a>
                 {% if user.role == 'admin' %}
                 <a href="#" class="nav-link" onclick="showExportModal(); return false;">Export CSV</a>
                 {% endif %}

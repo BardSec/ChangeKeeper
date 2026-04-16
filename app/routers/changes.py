@@ -5,13 +5,13 @@ from typing import Optional
 from urllib.parse import urlparse
 
 from fastapi import APIRouter, Request, Depends, HTTPException
-from fastapi.responses import HTMLResponse, StreamingResponse
+from fastapi.responses import HTMLResponse, StreamingResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 from sqlalchemy import or_
 
 from app.database import get_db
-from app.models import Change
+from app.models import Change, ChangeTypeEnum
 from app.schemas import ChangeCreate, ChangeFilter
 from app.auth import get_current_user, require_write_access, require_admin
 from app.services import AuditService, PDFGenerator, EmailService, SecretDetector
@@ -25,6 +25,7 @@ VALID_CATEGORIES = {'Network', 'Identity', 'Endpoint', 'Application', 'Vendor', 
 VALID_IMPACTS = {'Low', 'Medium', 'High'}
 VALID_USER_IMPACTS = {'None', 'Some', 'Many'}
 VALID_STATUSES = {'Planned', 'In Progress', 'Completed', 'Rolled Back', 'Failed'}
+VALID_CHANGE_TYPES = {'quick', 'full'}
 
 
 def get_client_ip(request: Request) -> str:
@@ -59,6 +60,7 @@ async def dashboard(
     search: Optional[str] = None,
     start_date: Optional[str] = None,
     end_date: Optional[str] = None,
+    change_type: Optional[str] = None,
     page: int = 1
 ):
     """Display dashboard with filterable list of changes."""
@@ -83,6 +85,9 @@ async def dashboard(
 
     if status:
         query = query.filter(Change.status == status)
+
+    if change_type and change_type in VALID_CHANGE_TYPES:
+        query = query.filter(Change.change_type == change_type)
 
     if search:
         safe = _escape_like(search)
@@ -141,7 +146,8 @@ async def dashboard(
             "status": status,
             "search": search,
             "start_date": start_date,
-            "end_date": end_date
+            "end_date": end_date,
+            "change_type": change_type
         },
         "page": page,
         "total_pages": total_pages,
@@ -167,6 +173,318 @@ async def new_change_wizard(
         "email_enabled": EmailService.is_enabled(),
         "csrf_token": csrf_token,
     })
+
+
+@router.get("/changes/quick", response_class=HTMLResponse)
+async def quick_log_form(
+    request: Request,
+    user: dict = Depends(require_write_access)
+):
+    """Display single-screen quick log form."""
+    from app.main import generate_csrf_token
+    csrf_token = generate_csrf_token(request)
+
+    return templates.TemplateResponse("quick_log.html", {
+        "request": request,
+        "user": user,
+        "default_implementer": user.get('email', ''),
+        "csrf_token": csrf_token,
+    })
+
+
+@router.post("/changes/quick")
+async def create_quick_log(
+    request: Request,
+    db: Session = Depends(get_db),
+    user: dict = Depends(require_write_access)
+):
+    """Create a quick log change record with minimal fields."""
+    form_data = await request.form()
+
+    from app.main import verify_csrf_token
+    submitted_token = form_data.get('csrf_token', '')
+    if not verify_csrf_token(request, submitted_token):
+        raise HTTPException(status_code=403, detail="CSRF token validation failed")
+
+    # Normalise enums
+    category_map = {
+        'NETWORK': 'Network', 'IDENTITY': 'Identity', 'ENDPOINT': 'Endpoint',
+        'APPLICATION': 'Application', 'VENDOR': 'Vendor', 'OTHER': 'Other',
+        'Network': 'Network', 'Identity': 'Identity', 'Endpoint': 'Endpoint',
+        'Application': 'Application', 'Vendor': 'Vendor', 'Other': 'Other',
+    }
+    status_map = {
+        'PLANNED': 'Planned', 'IN PROGRESS': 'In Progress', 'COMPLETED': 'Completed',
+        'ROLLED BACK': 'Rolled Back', 'FAILED': 'Failed',
+        'Planned': 'Planned', 'In Progress': 'In Progress', 'Completed': 'Completed',
+        'Rolled Back': 'Rolled Back', 'Failed': 'Failed',
+    }
+
+    raw_category = form_data.get('category', '')
+    raw_status = form_data.get('status', 'Completed')
+    category = category_map.get(raw_category.upper(), category_map.get(raw_category))
+    status_val = status_map.get(raw_status.upper(), status_map.get(raw_status))
+
+    if category not in VALID_CATEGORIES:
+        raise HTTPException(status_code=400, detail="Invalid category")
+    if status_val not in VALID_STATUSES:
+        raise HTTPException(status_code=400, detail="Invalid status")
+
+    title = form_data.get('title', '').strip()
+    systems = form_data.getlist('systems_affected')
+
+    if not title:
+        raise HTTPException(status_code=400, detail="Title is required")
+    if len(title) > 500:
+        raise HTTPException(status_code=400, detail="Title must be 500 characters or fewer")
+    if not systems:
+        raise HTTPException(status_code=400, detail="At least one system is required")
+
+    # Secret detection on the minimal data
+    check_data = {'title': title, 'what_changed': title}
+    has_secrets, findings = SecretDetector.has_secrets(check_data)
+    confirm_no_secrets = form_data.get('confirm_no_secrets') == 'true'
+    if has_secrets and not confirm_no_secrets:
+        finding_types = ', '.join(set(name for name, _ in findings))
+        raise HTTPException(
+            status_code=400,
+            detail=f"Potential secrets detected ({finding_types}). Please review and confirm."
+        )
+
+    change = Change(
+        title=title,
+        category=category,
+        systems_affected=json.dumps(systems),
+        implementer=user.get('email', ''),
+        impact_level='Low',
+        user_impact='None',
+        maintenance_window=False,
+        what_changed=title,
+        status=status_val,
+        created_by=user.get('email', ''),
+        change_type='quick'
+    )
+
+    db.add(change)
+    db.commit()
+    db.refresh(change)
+
+    AuditService.log_action(
+        db=db,
+        action='create',
+        user_email=user.get('email', ''),
+        user_name=user.get('name', ''),
+        change_id=change.id,
+        details={'change_type': 'quick'},
+        ip_address=get_client_ip(request)
+    )
+
+    return {"success": True, "change_id": change.id}
+
+
+@router.get("/changes/{change_id}/promote", response_class=HTMLResponse)
+async def promote_form(
+    request: Request,
+    change_id: int,
+    db: Session = Depends(get_db),
+    user: dict = Depends(require_write_access)
+):
+    """Display promotion wizard for a quick log."""
+    change = db.query(Change).filter(Change.id == change_id).first()
+    if not change:
+        raise HTTPException(status_code=404, detail="Change not found")
+
+    if not change.change_type or change.change_type.value != 'quick':
+        return RedirectResponse(url=f'/changes/{change_id}', status_code=302)
+
+    # Authorization: creator or admin
+    if change.created_by != user.get('email', '') and user.get('role') != 'admin':
+        raise HTTPException(status_code=403, detail="Not authorized to promote this change")
+
+    from app.main import generate_csrf_token
+    csrf_token = generate_csrf_token(request)
+
+    # Build pre-fill data for the wizard JS
+    prefill_data = {
+        'title': change.title,
+        'category': change.category.value if hasattr(change.category, 'value') else change.category,
+        'systems_affected': json.loads(change.systems_affected),
+        'implementer': change.implementer,
+        'impact_level': change.impact_level.value if hasattr(change.impact_level, 'value') else change.impact_level,
+        'user_impact': change.user_impact.value if hasattr(change.user_impact, 'value') else change.user_impact,
+        'maintenance_window': 'true' if change.maintenance_window else 'false',
+        'what_changed': change.what_changed,
+        'status': change.status.value if hasattr(change.status, 'value') else change.status,
+        'backout_plan': change.backout_plan or '',
+        'ticket_id': change.ticket_id or '',
+        'links': json.loads(change.links) if change.links else [],
+        'planned_start': change.planned_start.isoformat() if change.planned_start else '',
+        'planned_end': change.planned_end.isoformat() if change.planned_end else '',
+        'outcome_notes': change.outcome_notes or '',
+        'post_change_issues': change.post_change_issues or '',
+    }
+
+    return templates.TemplateResponse("change_wizard.html", {
+        "request": request,
+        "user": user,
+        "default_implementer": change.implementer,
+        "email_enabled": EmailService.is_enabled(),
+        "csrf_token": csrf_token,
+        "promote_mode": True,
+        "promote_change_id": change_id,
+        "prefill_json": json.dumps(prefill_data),
+    })
+
+
+@router.post("/changes/{change_id}/promote")
+async def promote_change(
+    request: Request,
+    change_id: int,
+    db: Session = Depends(get_db),
+    user: dict = Depends(require_write_access)
+):
+    """Promote a quick log to a full change."""
+    change = db.query(Change).filter(Change.id == change_id).first()
+    if not change:
+        raise HTTPException(status_code=404, detail="Change not found")
+
+    if not change.change_type or change.change_type.value != 'quick':
+        raise HTTPException(status_code=400, detail="Only quick logs can be promoted")
+
+    if change.created_by != user.get('email', '') and user.get('role') != 'admin':
+        raise HTTPException(status_code=403, detail="Not authorized to promote this change")
+
+    form_data = await request.form()
+
+    from app.main import verify_csrf_token
+    submitted_token = form_data.get('csrf_token', '')
+    if not verify_csrf_token(request, submitted_token):
+        raise HTTPException(status_code=403, detail="CSRF token validation failed")
+
+    # Same validation as create_change
+    category_map = {
+        'NETWORK': 'Network', 'IDENTITY': 'Identity', 'ENDPOINT': 'Endpoint',
+        'APPLICATION': 'Application', 'VENDOR': 'Vendor', 'OTHER': 'Other',
+        'Network': 'Network', 'Identity': 'Identity', 'Endpoint': 'Endpoint',
+        'Application': 'Application', 'Vendor': 'Vendor', 'Other': 'Other',
+    }
+    impact_map = {
+        'LOW': 'Low', 'MEDIUM': 'Medium', 'HIGH': 'High',
+        'Low': 'Low', 'Medium': 'Medium', 'High': 'High',
+    }
+    user_impact_map = {
+        'NONE': 'None', 'SOME': 'Some', 'MANY': 'Many',
+        'None': 'None', 'Some': 'Some', 'Many': 'Many',
+    }
+    status_map = {
+        'PLANNED': 'Planned', 'IN PROGRESS': 'In Progress', 'COMPLETED': 'Completed',
+        'ROLLED BACK': 'Rolled Back', 'FAILED': 'Failed',
+        'Planned': 'Planned', 'In Progress': 'In Progress', 'Completed': 'Completed',
+        'Rolled Back': 'Rolled Back', 'Failed': 'Failed',
+    }
+
+    raw_category = form_data.get('category', '')
+    raw_impact = form_data.get('impact_level', '')
+    raw_user_impact = form_data.get('user_impact', '')
+    raw_status = form_data.get('status', '')
+
+    category = category_map.get(raw_category.upper(), category_map.get(raw_category))
+    impact_level = impact_map.get(raw_impact.upper(), impact_map.get(raw_impact))
+    user_impact = user_impact_map.get(raw_user_impact.upper(), user_impact_map.get(raw_user_impact))
+    status_val = status_map.get(raw_status.upper(), status_map.get(raw_status))
+
+    if category not in VALID_CATEGORIES:
+        raise HTTPException(status_code=400, detail="Invalid category")
+    if impact_level not in VALID_IMPACTS:
+        raise HTTPException(status_code=400, detail="Invalid impact level")
+    if user_impact not in VALID_USER_IMPACTS:
+        raise HTTPException(status_code=400, detail="Invalid user impact")
+    if status_val not in VALID_STATUSES:
+        raise HTTPException(status_code=400, detail="Invalid status")
+
+    raw_links = [link for link in form_data.getlist('links') if link]
+    for link in raw_links:
+        if not _validate_link(link):
+            raise HTTPException(status_code=400, detail="Links must use http:// or https://")
+
+    title = form_data.get('title', '')
+    implementer_val = form_data.get('implementer', '')
+    what_changed = form_data.get('what_changed', '')
+    ticket_id = form_data.get('ticket_id') or None
+
+    if len(title) > 500:
+        raise HTTPException(status_code=400, detail="Title must be 500 characters or fewer")
+    if len(implementer_val) > 255:
+        raise HTTPException(status_code=400, detail="Implementer must be 255 characters or fewer")
+    if ticket_id and len(ticket_id) > 100:
+        raise HTTPException(status_code=400, detail="Ticket ID must be 100 characters or fewer")
+
+    if not title:
+        raise HTTPException(status_code=400, detail="Title is required")
+    if not category:
+        raise HTTPException(status_code=400, detail="Category is required")
+    systems = form_data.getlist('systems_affected')
+    if not systems:
+        raise HTTPException(status_code=400, detail="At least one system is required")
+    if not implementer_val:
+        raise HTTPException(status_code=400, detail="Implementer is required")
+    if not what_changed:
+        raise HTTPException(status_code=400, detail="What changed is required")
+    if not status_val:
+        raise HTTPException(status_code=400, detail="Status is required")
+
+    backout_plan = form_data.get('backout_plan') or None
+    if impact_level in ['Medium', 'High']:
+        if not backout_plan or not backout_plan.strip():
+            raise HTTPException(status_code=400, detail="Backout plan is required for Medium or High impact changes")
+
+    # Secret detection
+    check_data = {
+        'title': title, 'what_changed': what_changed,
+        'backout_plan': backout_plan or '', 'outcome_notes': form_data.get('outcome_notes', ''),
+    }
+    has_secrets, findings = SecretDetector.has_secrets(check_data)
+    confirm_no_secrets = form_data.get('confirm_no_secrets') == 'true'
+    if has_secrets and not confirm_no_secrets:
+        finding_types = ', '.join(set(name for name, _ in findings))
+        raise HTTPException(
+            status_code=400,
+            detail=f"Potential secrets detected ({finding_types}). Please review and confirm."
+        )
+
+    # Update the existing record
+    change.title = title
+    change.category = category
+    change.systems_affected = json.dumps(systems)
+    change.planned_start = form_data.get('planned_start') or None
+    change.planned_end = form_data.get('planned_end') or None
+    change.implementer = implementer_val
+    change.impact_level = impact_level
+    change.user_impact = user_impact
+    change.maintenance_window = form_data.get('maintenance_window') == 'true'
+    change.backout_plan = backout_plan
+    change.what_changed = what_changed
+    change.ticket_id = ticket_id
+    change.links = json.dumps(raw_links) if raw_links else None
+    change.status = status_val
+    change.outcome_notes = form_data.get('outcome_notes') or None
+    change.post_change_issues = form_data.get('post_change_issues') or None
+    change.change_type = 'full'
+
+    db.commit()
+    db.refresh(change)
+
+    AuditService.log_action(
+        db=db,
+        action='promote',
+        user_email=user.get('email', ''),
+        user_name=user.get('name', ''),
+        change_id=change.id,
+        details={'from_type': 'quick', 'to_type': 'full'},
+        ip_address=get_client_ip(request)
+    )
+
+    return {"success": True, "change_id": change.id}
 
 
 @router.post("/changes")
@@ -315,7 +633,8 @@ async def create_change(
         status=change_data['status'],
         outcome_notes=change_data.get('outcome_notes'),
         post_change_issues=change_data.get('post_change_issues'),
-        created_by=user.get('email', '')
+        created_by=user.get('email', ''),
+        change_type='full'
     )
 
     db.add(change)
@@ -402,7 +721,8 @@ async def download_change_pdf(
         'outcome_notes': change.outcome_notes,
         'post_change_issues': change.post_change_issues,
         'created_by': change.created_by,
-        'created_at': change.created_at
+        'created_at': change.created_at,
+        'change_type': change.change_type.value if hasattr(change.change_type, 'value') else (change.change_type or 'full')
     }
 
     pdf_buffer = PDFGenerator.generate_change_pdf(change_dict)
